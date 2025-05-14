@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shop - Crunch & Munch</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        .shop-container {
+            max-width: 1000px;
+            margin: auto;
+            padding: 2rem;
+        }
+
+        .product-card {
+            border: 1px solid #ccc;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 10px;
+        }
+
+        .product-card img {
+            max-width: 100px;
+        }
+
+        .product-card input {
+            width: 60px;
+        }
+
+        .payment-options {
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .summary-section {
+            margin-top: 2rem;
+            border-top: 2px solid #ccc;
+            padding-top: 1rem;
+        }
+
+        .summary-section h2 {
+            margin-bottom: 1rem;
+        }
+
+        .summary-section .product-summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-section .total-summary {
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="shop-container">
+        <h1>Shop Our Products</h1>
+
+        <div id="product-list"></div>
+
+        <!-- Summary Section -->
+        <div class="summary-section" id="summary-section">
+            <h2>Summary</h2>
+            <div id="product-summary-list"></div>
+            <div class="total-summary">
+                <p>Total Amount to Pay: <span id="total-amount">KES 0</span></p>
+            </div>
+        </div>
+
+        <!-- Payment section -->
+        <div class="payment-method" id="payment-section" style="display: none;">
+            <label for="payment">Choose Payment Method:</label>
+            <select id="payment" onchange="togglePaymentFields()">
+                <option value="">-- Select Payment Method --</option>
+                <option value="mpesa">M-Pesa</option>
+                <option value="airtel">Airtel Money</option>
+                <option value="card">Card</option>
+                <option value="cash">Cash on Delivery</option>
+            </select>
+
+            <div id="payment-details" style="margin-top: 1rem;"></div>
+
+            <button onclick="proceedPayment()">Purchase</button>
+        </div>
+    </div>
+
+
+
+    <script>
+        const products = [
+            { name: "Beans", pricePerKg: 120, image: "beans.jpg" },
+            { name: "Rice", pricePerKg: 150, image: "rice.avif" },
+            { name: "Millet", pricePerKg: 100, image: "millet.jpeg" },
+            { name: "Sorghum", pricePerKg: 90, image: "sorghum.jpeg" },
+            { name: "Maize", pricePerKg: 80, image: "maize.jpg" },
+            { name: "Peas", pricePerKg: 130, image: "peas.jpeg" },
+            { name: "Soya", pricePerKg: 140, image: "soya.jpeg" }
+        ];
+
+        const productList = document.getElementById("product-list");
+        let selectedProducts = [];
+
+        // Create product cards
+        products.forEach((product, index) => {
+            const card = document.createElement("div");
+            card.className = "product-card";
+            card.innerHTML = `
+                <img src="${product.image}" alt="${product.name}">
+                <h3>${product.name}</h3>
+                <p>Price: KES ${product.pricePerKg} per Kg</p>
+                <label for="qty-${index}">Quantity (Kg):</label>
+                <input type="number" id="qty-${index}" min="1" value="1" onchange="updateTotal(${index})">
+                <p id="total-${index}">Total: KES ${product.pricePerKg}</p>
+                <button onclick="selectProduct(${index})">Add to Cart</button>
+            `;
+            productList.appendChild(card);
+        });
+
+        function updateTotal(index) {
+            const qty = parseFloat(document.getElementById(`qty-${index}`).value);
+            const price = products[index].pricePerKg;
+            document.getElementById(`total-${index}`).innerText = `Total: KES ${qty * price}`;
+        }
+
+        function selectProduct(index) {
+            const qty = parseFloat(document.getElementById(`qty-${index}`).value);
+            if (qty <= 0) {
+                alert("Please enter a valid quantity.");
+                return;
+            }
+
+            // Add or update the selected product in the cart
+            const existingProductIndex = selectedProducts.findIndex(p => p.index === index);
+            if (existingProductIndex === -1) {
+                selectedProducts.push({ index, qty });
+            } else {
+                selectedProducts[existingProductIndex].qty = qty;
+            }
+
+            updateCartSummary();
+        }
+
+        function updateCartSummary() {
+            const summaryList = document.getElementById("product-summary-list");
+            summaryList.innerHTML = ""; // Clear the previous summary
+
+            let totalAmount = 0;
+            selectedProducts.forEach(product => {
+                const productInfo = products[product.index];
+                const productTotal = product.qty * productInfo.pricePerKg;
+
+                const productSummary = document.createElement("div");
+                productSummary.className = "product-summary";
+                productSummary.innerHTML = `
+            <span>${productInfo.name} (${product.qty} Kg)</span>
+            <span>KES ${productTotal}</span>
+        `;
+                summaryList.appendChild(productSummary);
+
+                totalAmount += productTotal;
+            });
+
+            document.getElementById("total-amount").innerText = `KES ${totalAmount.toFixed(2)}`;
+
+            // ✅ Show the payment section if items are in the cart
+            const paymentSection = document.getElementById("payment-section");
+            if (totalAmount > 0) {
+                paymentSection.style.display = "block";
+            } else {
+                paymentSection.style.display = "none";
+            }
+        }
+
+        function togglePaymentFields() {
+            const method = document.getElementById("payment").value;
+            const detailsDiv = document.getElementById("payment-details");
+
+            let html = "";
+            if (method === "mpesa" || method === "airtel") {
+                html = `
+                    <label for="phone">Enter Phone Number:</label>
+                    <input type="tel" id="phone" placeholder="e.g. 07XXXXXXXX" required />
+                `;
+            } else if (method === "card") {
+                html = `
+                    <label for="card">Card Number:</label>
+                    <input type="text" id="card" placeholder="XXXX-XXXX-XXXX-XXXX" required /><br/>
+                    <label for="bank">Bank Name:</label>
+                    <input type="text" id="bank" placeholder="Your Bank Name" required />
+                `;
+            } else {
+                html = ""; // Cash needs no extra input
+            }
+
+            detailsDiv.innerHTML = html;
+        }
+
+        function proceedPayment() {
+            const method = document.getElementById("payment").value;
+            if (!method) {
+                alert("Please choose a payment method.");
+                return;
+            }
+
+            // Get the overall total from the summary section
+            const totalAmount = parseFloat(document.getElementById("total-amount").innerText.replace("KES ", "").replace(",", ""));
+
+            if (isNaN(totalAmount) || totalAmount <= 0) {
+                alert("Please add items to your cart before proceeding.");
+                return;
+            }
+
+            // Prompt payment based on the method selected
+            if (method === "mpesa" || method === "airtel") {
+                const phone = document.getElementById("phone")?.value;
+                if (!phone || !/^07\d{8}$/.test(phone)) {
+                    alert("Please enter a valid phone number (07XXXXXXXX).");
+                    return;
+                }
+                alert(`A payment prompt has been sent to ${phone} via ${method.toUpperCase()} for a total of KES ${totalAmount.toFixed(2)}.`);
+            } else if (method === "card") {
+                const card = document.getElementById("card")?.value;
+                const bank = document.getElementById("bank")?.value;
+                if (!card || !bank) {
+                    alert("Please enter both card number and bank name.");
+                    return;
+                }
+                alert(`Processing card payment from ${bank} for a total of KES ${totalAmount.toFixed(2)}.`);
+            } else if (method === "cash") {
+                alert(`Thank you! Your order will be delivered. Please pay KES ${totalAmount.toFixed(2)} on delivery.`);
+            }
+        }
+
+    </script>
+</body>
+
+</html>
